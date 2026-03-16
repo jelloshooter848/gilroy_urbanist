@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Old Town Gilroy - Interactive Map Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .map-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .map-wrapper {
+            width: 100%;
+            height: 800px;
+            overflow: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: #f9f9f9;
+            position: relative;
+        }
+
+        .map-wrapper svg {
+            display: block;
+            width: 100%;
+            height: auto;
+            cursor: crosshair;
+        }
+
+        /* Make SVG shapes interactive */
+        .map-wrapper svg path,
+        .map-wrapper svg rect,
+        .map-wrapper svg circle,
+        .map-wrapper svg polygon {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .map-wrapper svg path:hover,
+        .map-wrapper svg rect:hover,
+        .map-wrapper svg circle:hover,
+        .map-wrapper svg polygon:hover {
+            fill: rgba(102, 126, 234, 0.5) !important;
+            stroke: #667eea !important;
+            stroke-width: 3 !important;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 25px;
+            height: fit-content;
+            max-height: 800px;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .info-box p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        .info-box .label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .legend {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .legend h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .legend-item:hover {
+            background: white;
+        }
+
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-box .number {
+            font-size: 2em;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-box .label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .click-hint {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .map-wrapper {
+                height: 600px;
+            }
+
+            .sidebar {
+                max-height: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Old Town Gilroy</h1>
+        <p>Interactive Map Demo - Click on buildings to explore</p>
+    </div>
+
+    <div class="container">
+        <div class="map-container">
+            <div class="click-hint">
+                Click on any building or area on the map to see details!
+            </div>
+            <div class="map-wrapper" id="mapContainer">
+                <!-- SVG will be loaded here -->
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <h2>Location Info</h2>
+            <div class="info-box" id="infoBox">
+                <h3>Welcome!</h3>
+                <p>Click on any building or area on the map to see information about that location.</p>
+                <p class="label" style="margin-top: 15px;">What you can do:</p>
+                <ul style="margin-left: 20px; color: #666;">
+                    <li>Click buildings to see details</li>
+                    <li>Hover over areas to highlight them</li>
+                    <li>Scroll to zoom in/out</li>
+                </ul>
+            </div>
+
+            <div class="stats">
+                <div class="stat-box">
+                    <span class="number" id="clickCount">0</span>
+                    <span class="label">Clicks</span>
+                </div>
+                <div class="stat-box">
+                    <span class="number" id="shapeCount">0</span>
+                    <span class="label">Areas</span>
+                </div>
+            </div>
+
+            <div class="legend">
+                <h3>Quick Stats</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #667eea;"></div>
+                    <span>Click to explore buildings</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #764ba2;"></div>
+                    <span>Businesses</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #48bb78;"></div>
+                    <span>Parks & Recreation</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load the SVG map
+        fetch('map.svg')
+            .then(response => response.text())
+            .then(svgData => {
+                const mapContainer = document.getElementById('mapContainer');
+                mapContainer.innerHTML = svgData;
+
+                // Get all interactive shapes
+                const shapes = mapContainer.querySelectorAll('path, rect, circle, polygon');
+                document.getElementById('shapeCount').textContent = shapes.length;
+
+                let clickCount = 0;
+
+                // Function to determine location type from name
+                function getLocationType(name) {
+                    const nameLower = name.toLowerCase();
+                    if (nameLower.includes('alley') || nameLower.includes('street') ||
+                        nameLower.includes('avenue') || nameLower.includes('path')) {
+                        return 'Street/Path';
+                    } else if (nameLower.includes('parking')) {
+                        return 'Parking';
+                    } else if (nameLower.includes('grass') || nameLower.includes('park')) {
+                        return 'Green Space';
+                    } else if (nameLower.includes('city hall') || nameLower.includes('library') ||
+                               nameLower.includes('auditorium') || nameLower.includes('civic')) {
+                        return 'Public Building';
+                    } else {
+                        return 'Location';
+                    }
+                }
+
+                // Add click handlers to all shapes
+                shapes.forEach((shape, index) => {
+                    // Get the Inkscape label attribute
+                    const locationName = shape.getAttribute('inkscape:label') ||
+                                        shape.getAttribute('aria-label') ||
+                                        `Unnamed Area ${index + 1}`;
+
+                    const locationType = getLocationType(locationName);
+
+                    shape.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        clickCount++;
+                        document.getElementById('clickCount').textContent = clickCount;
+
+                        // Update info box with actual SVG label data
+                        const infoBox = document.getElementById('infoBox');
+                        infoBox.innerHTML = `
+                            <h3>${locationName}</h3>
+                            <p><span class="label">Type:</span> ${locationType}</p>
+                            <p><span class="label">Status:</span> Area from map</p>
+                            ${locationType === 'Street/Path' ?
+                                '<p style="margin-top: 10px; color: #666;">This is a street or pathway. Building/business data will be added later.</p>' :
+                                '<p style="margin-top: 10px; color: #666;">Click on buildings to see business information (coming soon).</p>'
+                            }
+                            <p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; color: #999; font-size: 0.9em;">
+                                Shape ID: ${index + 1}<br>
+                                In the final app, buildings will show real business data.
+                            </p>
+                        `;
+
+                        // Visual feedback
+                        shape.style.fill = 'rgba(102, 126, 234, 0.3)';
+                        setTimeout(() => {
+                            shape.style.fill = '';
+                        }, 1000);
+                    });
+
+                    // Add unique ID and name to each shape for future reference
+                    shape.setAttribute('data-location-id', index + 1);
+                    shape.setAttribute('data-location-name', locationName);
+                    shape.setAttribute('data-location-type', locationType);
+                });
+
+                console.log(`Loaded ${shapes.length} interactive areas on the map`);
+
+                // Log some sample names to console
+                const sampleShapes = Array.from(shapes).slice(0, 10);
+                console.log('Sample location names:', sampleShapes.map(s =>
+                    s.getAttribute('inkscape:label') || 'Unnamed'
+                ));
+            })
+            .catch(error => {
+                console.error('Error loading map:', error);
+                document.getElementById('mapContainer').innerHTML =
+                    '<div style="padding: 40px; text-align: center; color: #999;">Error loading map. Please make sure map.svg is in the same directory.</div>';
+            });
+    </script>
+</body>
+</html>
